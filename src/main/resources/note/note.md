@@ -35,4 +35,71 @@
         
 #### jmh 工具
     多线程在多核cpu下提高效率，但在单核cpu下并无太大的区别
+
+
+#### 创建线程
+    1.使用Thread  
+    2.使用Runnable 推荐
+    3.使用lambda表达式
+    4.FutureTask  JUC 增加返回值
     
+#### 查看进程，线程
+    linux
+        ps -fe 查看所有线程
+        ps -fT -p <PID> 查看某个进程的所有
+        kill pid 杀死进程
+        top 查看进程信息
+        
+    java
+        jps 查看所有java进程
+        jstack pid 
+        jconsole 图形化查看
+#### 线程运行原理
+    栈与栈帧
+        线程启动后，jvm都会分配一块栈内存，栈又有栈帧组成
+        栈帧为每次方法调用时占用的内存
+        栈帧包含:**局部变量表，操作数栈，动态链接，方法返回值**和一些附带信息
+        栈帧执行完后，就销毁了，内存就释放了
+        
+#### 线程上下文切换
+    使用CPU -> 不使用CPU
+    1.线程的CPU时间片用完
+    2.垃圾回收
+    3.有更高优先级的线程需要执行
+    4.线程自己调用sleep yield wait等方法
+    
+    程序计数器，作用保存当前线程的状态 是记住下一条jvm指令的执行地址 线程私有的
+    频繁的上下文切换，会影响性能
+#### 线程中常用方法
+    start(): 让线程进入就绪状态，由线程调度器决定是否运行，线程start()只能调用一次
+    run(): 新线程调用的时候，会自动调用
+    join()、join(long n ): 等待线程运行结束 n最长等待时间
+    sleep(): 不会释放锁 
+    yield(): 让出当前线程
+    ...
+
+#### run 与 start 区别
+    run() 只是一个普通方法；
+    start() private native void start0()
+    
+#### sleep() 与 yield() 区别
+
+    sleep: RUNNABLE -> TIME WAITING(阻塞)
+    其他线程可以使用interrupt来打断 java.lang.InterruptedException: sleep interrupted
+    睡眠结束后的线程，未必立即得到执行
+    使用TimeUnit的sleep代替Thread.sleep()
+    
+    yield: RUNNABLE -> RUNNABLE就绪 然后调度执行其他线程
+    具体的实现依赖于操作系统的任务调度器
+    
+    就绪状态会获得时间片，而阻塞状态不会
+#### 线程优先级
+    PRIORITY: 1 - 10
+    让调度器优先调用该线程 但是不一定优先
+    当cpu比较忙，那么优先级高的线程会获得更多的时间片，空闲时，几乎没用
+#### 线程状态
+    NEW : 新建线程
+    RUNNABLE: 运行
+    
+#### 案例 防止CPU占用100%
+    利用while(true)中加入sleep 或者yield
