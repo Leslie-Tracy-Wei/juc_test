@@ -103,3 +103,186 @@
     
 #### 案例 防止CPU占用100%
     利用while(true)中加入sleep 或者yield
+
+
+#### join的使用
+    等待线程执行结束
+    多个join是并行执行的 所以 耗时取长的那个 
+    join(long) 不一定要等待long 只要线程结束了就返回
+   
+#### interrupt
+    打断处于阻塞线程 sleep wait join isInterrupt为false 直接抛出异常
+    打断正常线程 isInterrupt为true 被打断的线程不会停下来，需要判断isInterrupt 不会清楚标记
+    interrupted() 静态方法 会清除标记
+    
+    LockSupport : 打断表示为true 会让park失效
+    
+
+#### 多线程的设计模式
+    两阶段终止模式: 在一个线程t1中优雅的结束线程t2
+    错误使用:
+        使用stop() 因为stop会将线程直接杀死 但是有可能该线程有资源共享的部分锁住了，这样就没办法释放锁
+    
+``` java
+    class TwoParseTermination{
+        private Thread monitor;
+    
+        public void start(){
+            monitor = new Thread("monitor"){
+                @Override
+                public void run() {
+                    while (true) {
+                        Thread curr = Thread.currentThread();
+                        if (curr.isInterrupted()){
+                            System.out.println("处理后事");
+                            break;
+                        }
+                        try {
+                            Thread.sleep(1000);
+                            System.out.println("处理监控");
+                        } catch (InterruptedException e) {
+                            curr.interrupt();
+                        }
+    
+                    }
+                }
+            };
+    
+            monitor.start();
+        }
+    
+        public void stop(){
+            monitor.interrupt();
+        }
+    }
+
+```
+
+#### 不推荐使用的方法
+    stop():
+    suspend():
+    resume(): 容易破坏同步代码块，影响锁的使用
+    
+#### 主线程、守护线程
+    只要还有线程还在运行 ，java进程就还在运行
+    只要别的线程结束了，那么守护线程就会被强制结束
+    setdaemon(true) 设置守护线程
+    例子:
+        垃圾回收器就是个守护线程
+        Tomcat：accpetor和poller也是守护线程
+
+
+#### 线程状态
+    从操作系统:
+        初始状态 -> 可运行状态 -> 运行状态 -> 阻塞状态 -> 终止状态 
+        初始状态: 仅仅只是创建了线程
+        可运行状态: 指已经创建了，可以让cpu调用
+        运行状态: 获取到cpu时间片运行的状态 切换 -》 上下文切换会导致
+        阻塞状态: 只要一直不被唤醒，调度器就不会考虑调度
+        终止状态: 生命周期结束
+     从语言层面:
+        NEW: 同初始状态
+        RUNNABLE: 包含初始状态和可运行状态和阻塞状态
+        
+        BLOCKED:
+        WAITING: join
+        TIME_WAITING: sleep
+        
+        TERMINATED: 生命周期结束
+        
+#### 线程状态
+```java
+@Slf4j
+public class TestThreadStatus {
+    public static void main(String[] args) throws InterruptedException {
+
+        // new
+        Thread t1 = new Thread("t1"){
+            @Override
+            public void run() {
+                log.info("aaaa");
+            }
+        };
+
+
+        // RUNNABLE
+        final Thread t2 = new Thread("t2"){
+            @Override
+            public void run() {
+                while (true){
+
+                }
+            }
+        };
+        t2.start();
+
+        // TIME_WAITING
+        Thread t3 = new Thread("t3"){
+            @Override
+            public void run() {
+                synchronized (TestThreadStatus.class){
+                    try {
+                        Thread.sleep(100000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        };
+        t3.start();
+
+
+        // WAITING
+        Thread t4 = new Thread("t4"){
+            @Override
+            public void run() {
+                try {
+                    t2.join();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        };
+
+        t4.start();
+
+        // BLOCKED
+        Thread t5 = new Thread("t5"){
+            @Override
+            public void run() {
+                synchronized (TestThreadStatus.class){
+                    try {
+                        Thread.sleep(100000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        };
+        t5.start();
+
+        // TERMINATED
+        Thread t6 = new Thread("t6"){
+            @Override
+            public void run() {
+
+            }
+        };
+        t6.start();
+
+
+        Thread.sleep(500);
+        log.debug(" t1 -》 " + t1.getState());
+        log.debug(" t2 -》 " + t2.getState());
+        log.debug(" t3 -》 " + t3.getState());
+        log.debug(" t4 -》 " + t4.getState());
+        log.debug(" t5 -》 " + t5.getState());
+        log.debug(" t6 -》 " + t6.getState());
+    }
+}
+```
+
+
+#### 共享模型
+    管程-悲观锁(阻塞):
+        
