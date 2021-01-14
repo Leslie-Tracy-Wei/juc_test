@@ -350,4 +350,23 @@ public class TestThreadStatus {
 #### synchronized原理
     monitorenter: 将lock对象markword置为monitor指针
     monitorexit: 将lock对象markword重置，唤醒EntryList
+    
+    monitor:
+    轻量级锁: 如果加锁的时间是错开的，即无竞争的情况下 语法还是synchronized 优先使用轻量级锁
+            缺点:
+                每次重入仍然需要执行CAS操作
+    在栈帧中生成一个锁记录lock record 包含地址00 Object Refenrece 
+    00 轻量级锁 10重量级锁
+    synchronized 锁重入 Lock record中地址为null 
+    偏向锁:
+        Java 6 优化，只要第一次将markWord替换为ThreadId，后面只要发现还是自己的锁，那么就不进行cas
+        biased_lock:0(偏向锁) 表示偏向锁的状态 1为启用 默认是开启的 对象头为101
+        偏向锁不会在对象生成马上生成 需要一定时间生成
+        获取对象的hashcode() 会使偏向锁失效。
+    锁膨胀:
+        在尝试加轻量级锁的过程中，CAS操作无法成功，说明其他线程给对象加入了轻量级锁(有竞争)，这时候就需要锁膨胀，将轻量级锁升级为重量级锁
+    
+    自旋优化:
+        如果当前线程自旋成功，即结束了同步代码部分，释放了锁，说明当前线程可以避免阻塞 避免上下文切换
+        jvm底层自己控制自旋次数
         
