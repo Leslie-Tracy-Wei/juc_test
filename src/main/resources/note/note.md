@@ -328,4 +328,26 @@ public class TestThreadStatus {
      
      对于多个对象实例 锁class
      对于单个 锁对象
-     
+
+#### Monitor 
+    Java对象头:
+        Mark Word (32bits):
+            hashcode 25 age 4(垃圾回收分代年龄) biased_lock:0(偏向锁) 01(锁状态)
+        Klass Word(32Bits):
+            存放类对象信息
+        array length: 数组对象有 
+    Integer : 占 8 + 4
+    int : 4
+    
+    Monitor 监视器、管程
+    每个java对象关联一个monitor对象 
+        monitor包含
+            waitSet
+            entryList : 等待队列 让线程进入blocked状态
+            Owner : 持有者
+    当线程调用同步代码时，就会尝试用markword去指向monitor对象
+
+#### synchronized原理
+    monitorenter: 将lock对象markword置为monitor指针
+    monitorexit: 将lock对象markword重置，唤醒EntryList
+        
