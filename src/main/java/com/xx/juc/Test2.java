@@ -2,6 +2,7 @@ package com.xx.juc;
 
 import lombok.SneakyThrows;
 
+import java.util.Calendar;
 import java.util.concurrent.Callable;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
@@ -10,7 +11,9 @@ import java.util.concurrent.locks.LockSupport;
 public class Test2 {
     static int b = 10;
     public static void main(String[] args) throws Exception{
-        test3();
+        Calendar c = Calendar.getInstance();
+        Integer now = c.get(Calendar.HOUR_OF_DAY) * 100 + c.get(Calendar.MINUTE);
+        System.out.println(now);
 
     }
 

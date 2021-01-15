@@ -342,7 +342,7 @@ public class TestThreadStatus {
     Monitor 监视器、管程
     每个java对象关联一个monitor对象 
         monitor包含
-            waitSet
+            waitSet : 用于wait、notify 
             entryList : 等待队列 让线程进入blocked状态
             Owner : 持有者
     当线程调用同步代码时，就会尝试用markword去指向monitor对象
@@ -369,4 +369,34 @@ public class TestThreadStatus {
     自旋优化:
         如果当前线程自旋成功，即结束了同步代码部分，释放了锁，说明当前线程可以避免阻塞 避免上下文切换
         jvm底层自己控制自旋次数
-        
+    
+    wait/notify 也会撤销偏向锁，轻量级锁
+    
+    批量重偏向:
+        当频繁获取对象锁时 当阈值超过20 就重新偏向到新的线程id
+    批量撤销:
+        当撤销偏向锁阈值操作40次后，jvm会认定根本不该偏向，于是整个类的对象都会变为不可偏向，新建的对象也不可偏向
+    
+    锁消除:
+        JIT 即时编译器 热点代码 进行优化 
+        可以通过-XX:-EliminateLocks 开启关闭
+
+
+#### wait、notify
+    原理:
+        进入waitSet 变为WAITING状态 
+        WAITING和BLOCKED都是阻塞 不占用cpu
+        BLOCKED线程会在OWNER线程释放锁唤醒
+        WAITING线程会在Owner线程调用notify、notifyAll唤醒，进入到waitSet，仍需进入EntrySet重新竞争
+        必须是获得对象的锁才能调用wait notify
+        wait(0) 相当于无限制的等待
+        wait(long timeOut) 有时限的等待
+
+#### wait sleep
+    sleep是Thread的静态方法 wait是对象的方法 
+    sleep不需要强制配合synchronized使用，但wait一定要搭配synchronized使用
+    sleep在睡眠的同时，不会释放锁，wait会释放锁
+    
+    状态都是一样的 time_waiting
+
+#### 保护性暂停
