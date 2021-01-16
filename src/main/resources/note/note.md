@@ -181,11 +181,11 @@
         阻塞状态: 只要一直不被唤醒，调度器就不会考虑调度
         终止状态: 生命周期结束
      从语言层面:
-        NEW: 同初始状态
-        RUNNABLE: 包含初始状态和可运行状态和阻塞状态
-        
-        BLOCKED:
-        WAITING: join
+        NEW: 同初始状态 还没与操作系统关联起来
+        RUNNABLE: 与操作系统关联起来 包含初始状态和可运行状态和阻塞状态 能与BLocked waiting time_waiting互相转换
+        BLOCKED: 
+        WAITING: join wait、notify 
+            竞争锁成功 回runnable 否则到BLOCKED
         TIME_WAITING: sleep
         
         TERMINATED: 生命周期结束
@@ -399,4 +399,109 @@ public class TestThreadStatus {
     
     状态都是一样的 time_waiting
 
-#### 保护性暂停
+#### 同步模式 保护性暂停 
+    一个线程等另一个线程的结果
+    只能是1对1
+    解耦 产生结果的线程 和接收结果的咸亨
+
+#### join 原理
+    底层是使用wait()来实现的，使用保护性暂停
+
+#### 异步模式 生产者、消费者模式
+    生产者只生产数据 ，消费者只处理数据
+    一般使用一个队列来传递消息
+
+#### park / unpark
+    park:暂停当前线程 对应状态为wait
+    unpark:恢复当前线程 可以在park前调用 也可以在后调用
+    
+    与wait/notify比较:
+        wait/notify必须与Object monitor配合使用 ，而unpark不需要
+        park&unpark是以线程未单位进行阻塞和唤醒的，而notify是随机一个，notifyAll是全部，因此不是那么精确
+        park&unpark没有顺序要求，而notify一定是要在wait之后
+    原理:
+        每个线程都有一个park对象 : _counter _cond _mutex
+        调用park就是看需不需要停下来 进_cond休息
+        调用unpark就是让_counter增加 多次调用_counter只会增加一次
+
+
+#### 多把锁 
+    增加并发度
+    但是容易产生死锁
+#### 线程活跃性
+    死锁:
+```java
+ public static void main(String[] args) {
+
+        Object a = new Object();
+        Object b = new Object();
+        new Thread(() ->{
+            synchronized (a){
+                log.debug("持有a");
+                try {
+                    Thread.sleep(11);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                synchronized (b){
+                    log.debug("持有b");
+                }
+            }
+        }).start();
+        new Thread(() ->{
+            synchronized (b){
+                log.debug("持有b");
+                try {
+                    Thread.sleep(11);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                synchronized (a){
+                    log.debug("持有a");
+                }
+            }
+        }).start();
+
+
+    }
+```
+
+    定位死锁
+        jps 查看所有id 
+        jstack 查看线程状态
+        jconsole定位死锁 -》 检测死锁
+        
+    哲学家就餐问题:
+        要么思考 要么吃饭
+    
+    活锁:
+        两个线程因为结束条件不一样，导致两个线程一直执行 
+    饥饿:
+        由于线程的优先级太低，始终得不到CPU的调度
+        顺序加锁: 可以解决死锁，但是会导致线程饥饿情况
+
+##### ReentrantLock
+    与synchronized比较:
+        synchronized不能中断 
+        可以设置超时时间 tryLock 尝试获取锁 tryLock(long time,TimeUnit)
+        可以设置为公平锁 防止线程饥饿 一般不设置公平锁 因为会降低并发度
+        支持多个条件变量
+            synchronized 中waitSet就是条件变量
+            ReentrantLock 支持多个休息室 那么就可以当个去单个指定唤醒
+            
+            使用流程:
+                await前需要获得锁
+                await 执行后，会释放锁 进入conditionObject等待
+                await的线程被唤醒(或者打断，或者超时) 重新竞争lock锁
+                竞争lock锁成功后，从await后继续执行
+        都支持可重入
+    
+    可重入 指的是同一个线程如果首次获得了这把锁，那么因为他是这把锁的主人，因此有权利再次获取这把锁
+    如果是不可重入，那么第二次获得锁的时候，自己也会被挡住
+    
+    
+#### 同步模式 顺序控制
+    wait notify实现方式:
+        
+    
+    
