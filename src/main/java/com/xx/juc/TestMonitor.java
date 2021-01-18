@@ -7,6 +7,7 @@ public class TestMonitor {
     public static void main(String[] args) throws InterruptedException {
         TwoParseTermination t = new TwoParseTermination();
         t.start();
+        t.start();
 
         Thread.sleep(5000);
 
@@ -18,14 +19,21 @@ public class TestMonitor {
 
 class TwoParseTermination{
     private Thread monitor;
-
+    private volatile boolean stop = false;
+    private boolean start = false;
     public void start(){
+        synchronized (this){
+            if (start){
+                return;
+            }
+            start = true;
+        }
         monitor = new Thread("monitor"){
             @Override
             public void run() {
                 while (true) {
                     Thread curr = Thread.currentThread();
-                    if (curr.isInterrupted()){
+                    if (stop){
                         System.out.println("处理后事");
                         break;
                     }
@@ -39,11 +47,14 @@ class TwoParseTermination{
                 }
             }
         };
-
         monitor.start();
+
     }
 
     public void stop(){
-        monitor.interrupt();
+//        monitor.interrupt();
+        synchronized (this){
+            stop = true;
+        }
     }
 }
