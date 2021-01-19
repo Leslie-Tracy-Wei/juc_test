@@ -551,4 +551,66 @@ public class TestThreadStatus {
     线程安全的单例 监控线程
     
 #### 双重检查锁问题
+```java
+// double checked locking
+// 懒汉式
+// 只有第一个if使用到INSTANCE
+public class Singleton {
+    private Singleton(){
+
+    }
+     public static volatile Singleton INSTANCE = null;
+
+    public static Singleton getInstance(){
+        // new Singleton -> 引用地址 -> *调用构造函数 -> *赋值给变量
+        // 可能先赋值给变量 再调用构造函数 ，可能还没构造函数，但是INSTANCE已经有
+        // synchronized不能阻止重排序
+        if (INSTANCE == null){ // 主要是这一步没有完全被synchronized保护
+            synchronized (Singleton.class){
+                if (INSTANCE == null){
+                    INSTANCE = new Singleton();
+                }
+            }
+        }
+        return INSTANCE;
+    }
+}
+```
+
+#### happens-before
+    规定了对共享变量的写操作对其他线程的读操作可见，他是可见性与有序性的一套规则总结
+
+
+
+#### 无锁并发 乐观锁 cas
+    cas compareAndSet必须是原子操作的
+    cas底层实际是lock cmpxchg 在单核cpu和多核cpu下能够保证原子性
+```java
+    public void withDraw(Integer amount){
+    while(true){
+        int prev = balance.get();
+        int next = prev - amount;
+        if (balance.compareAndSet(prev,next)){
+            break;
+        }   
+    }
+}
+```    
+    cas与volatile cas只能保证原子性，所以value都是被volatile修饰 保证其有序性和可见性
+    为什么无锁效率高:
+        因为线程并没有发生上下文切换，而synchronized会发生上下文切换(成本大)
+        CAS适合于线程数少，多核CPU的场景下
+    CAS是基于乐观锁，实际无锁的思想，不怕别的线程修改共享变量，就算改了，可以重试；
+    但是竞争激烈的话，一直的循环尝试反而会影响效率
+    synchronized基于悲观锁，防止别人来修改，直接上锁    
+
+#### 原子整数
+    AtomicBoolean
+    AtomicInteger
+    AtomicLong
     
+#### 原子引用
+    AtomicReference
+    AtomicMarkableReference ： 关心是否被更改过
+    AtomicStampedReference  ： 解决ABA问题，使用版本号
+#### CAS ABA问题
