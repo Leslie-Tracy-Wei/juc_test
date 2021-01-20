@@ -609,8 +609,88 @@ public class Singleton {
     AtomicInteger
     AtomicLong
     
+    
+#### 原子数组 
+    保护数组内的安全
+    AtomicIntegerArray
+    AtomicLongArray
+    AtomicReferenceArray
 #### 原子引用
     AtomicReference
     AtomicMarkableReference ： 关心是否被更改过
     AtomicStampedReference  ： 解决ABA问题，使用版本号
+
+#### 字段更新器
+    AtomicIntegerFieldUpdater   
+    AtomicLongFieldUpdater
+    AtomicReferenceFieldUpdater
+    
+#### 原子累加器
+    效率比Atomic要高，就是在有竞争的情况下 设置多个累加单元 Thread-0累加Cell[0] ....Thread-n累加Cell[n] ，最终汇总结果，操作在不同的cell变量，减少CAS重试失败，提高性能
+    LongAdder
+    DoubleAdder
+    源码:
+        cells[] : 累加单元数组，惰性初始化
+        base: 基础值，无竞争时，累加该值
+        cellsBusy: 在Cells创建时或者扩容时，置为1，表示加锁
+        cpu -> memory 耗费时间长 120-240cycle 
+        cpu -> L1,L2,L3 速度快一点
+        @sun.misc.Contended 防止缓存行伪共享 ，原理是防止缓存行存在多个cells
+        缓存行:每一个缓存行对应一块内存 
+        伪共享: 
 #### CAS ABA问题
+
+
+#### 函数式接口
+    supplier : 提供者 特点是无中生有 () -> 结果
+    function : 函数 特点一个参数一个结果  (参数params) -> result, BiFuntion (参数1，参数2 ) -》 result
+    consumer : 消费者 特点 一个参数没有结果 (参数) -> void ,BiFuntion(参数1，参数2) -> void
+```java
+public class Test7 {
+
+    public static void main(String[] args) {
+        demo(
+                () -> new int[10],
+                (array) -> array.length,
+                (array,index) -> array[index] ++,
+                (array) -> System.out.println(Arrays.toString(array))
+        );
+
+        demo(
+                () -> new AtomicIntegerArray(10),
+                (array) -> array.length(),
+                (array,index) -> array.getAndIncrement(index),
+                (array) -> System.out.println(array)
+        );
+    }
+    private static <T> void demo(
+            Supplier<T> arraySupplier,
+            Function<T,Integer> lengthFun,
+            BiConsumer<T,Integer> putConsumer,
+            Consumer<T> printConsumer
+    ){
+        List<Thread> ts = new ArrayList<>();
+        T array = arraySupplier.get();
+
+        int length = lengthFun.apply(array);
+
+        for (int i = 0; i < length; i++) {
+            ts.add(new Thread(() ->{
+                for (int j = 0; j < 10000; j++) {
+                    putConsumer.accept(array,j % length);
+                }
+            }));
+        }
+        ts.forEach(Thread::start);
+        ts.forEach(t -> {
+            try {
+
+                t.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        });
+        printConsumer.accept(array);
+    }
+}
+```
