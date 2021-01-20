@@ -694,3 +694,155 @@ public class Test7 {
     }
 }
 ```
+
+#### Unsafe
+    底层提供操作内存，线程的方法
+#### 手写一个AtomicInteger
+```java
+public class UnSafeTest {
+    public static void main(String[] args) throws NoSuchFieldException, IllegalAccessException, InterruptedException {
+
+//        Field theUnsafe = Unsafe.class.getDeclaredField("theUnsafe");
+//        theUnsafe.setAccessible(true);
+//
+//        Unsafe unsafe = (Unsafe)theUnsafe.get(null);
+//
+//        System.out.println(unsafe);
+//
+//        long idOffset = unsafe.objectFieldOffset(Teacher.class.getDeclaredField("id"));
+//        long nameOffset = unsafe.objectFieldOffset(Teacher.class.getDeclaredField("name"));
+//        Teacher teacher = new Teacher();
+//        System.out.println(teacher);
+//
+//        unsafe.compareAndSwapInt(teacher,idOffset,0,1);
+//        unsafe.compareAndSwapObject(teacher,nameOffset,null,"tom");
+//
+//
+//        System.out.println(teacher);
+        MyAtomicInteger myAtomicInteger = new MyAtomicInteger(10000);
+        for (int i = 0; i < 1000; i++) {
+            new Thread(() ->{
+                myAtomicInteger.decrement(10);
+            }).start();
+        }
+
+        Thread.sleep(4000);
+
+        System.out.println(myAtomicInteger.getValue());
+    }
+}
+
+
+class Teacher{
+
+    volatile int id;
+    volatile String name;
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    @Override
+    public String toString() {
+        return "Teacher{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                '}';
+    }
+}
+
+
+
+class MyAtomicInteger{
+
+    public MyAtomicInteger(int value){
+        this.value = value;
+    }
+    private volatile int value;
+    private static final long valueOffset;
+    static final Unsafe UNSAFE;
+
+    static {
+        Field theUnsafe = null;
+        try {
+            theUnsafe = Unsafe.class.getDeclaredField("theUnsafe");
+        } catch (NoSuchFieldException e) {
+            e.printStackTrace();
+
+
+        }
+        theUnsafe.setAccessible(true);
+
+        try {
+            UNSAFE = (Unsafe)theUnsafe.get(null);
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+            throw new RuntimeException();
+        }
+
+        try {
+            valueOffset = UNSAFE.objectFieldOffset(MyAtomicInteger.class.getDeclaredField("value"));
+        } catch (NoSuchFieldException e) {
+            e.printStackTrace();
+            throw new RuntimeException();
+        }
+    }
+
+    public int getValue(){
+        return value;
+    }
+
+
+    public void decrement(int amount){
+        for (;;){
+            int prev = this.value;
+            int next = prev - amount;
+            if (UNSAFE.compareAndSwapInt(this,valueOffset,prev,next)) {
+                break;
+            }
+        }
+    }
+}
+```
+
+
+#### 不可变类
+    SimpleDateFormat 线程非安全的
+    DateTimeFormatter 线程安全的
+    
+    final ：
+        属性用final修饰保证了该属性是只读的，不可修改
+        类用final修饰保证该类中的方法不能被覆盖，防止子类无意破坏不可变性
+        String构造函数中用复制过来 保护性拷贝来保证不引用同一个 意思就是通过创建副本对象来避免共享的手段称为保护性拷贝
+    
+    
+#### 享元模式 Flyweight pattern 
+    当需要重用数量有限的同一类对象
+    包装类中的valueOf()方法使用到享元模式 其实就是资源池重用
+
+```java
+ private static class LongCache {
+        private LongCache(){}
+        
+        // 一个缓存的数组
+        static final Long cache[] = new Long[-(-128) + 127 + 1];
+        // 初始化
+        static {
+            for(int i = 0; i < cache.length; i++)
+                cache[i] = new Long(i - 128);
+        }
+    }
+```    
+    每个单个方法是原子的，但是组合操作并不是原子的
