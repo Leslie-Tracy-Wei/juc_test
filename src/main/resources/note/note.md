@@ -846,3 +846,10 @@ class MyAtomicInteger{
     }
 ```    
     每个单个方法是原子的，但是组合操作并不是原子的
+
+#### final原理
+    设置final变量: final int a = 10; 会赋值后，在后面增加写屏障
+
+
+#### 并发工具
+    
