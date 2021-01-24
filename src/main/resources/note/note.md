@@ -835,7 +835,7 @@ class MyAtomicInteger{
 ```java
  private static class LongCache {
         private LongCache(){}
-        
+        ~~~~
         // 一个缓存的数组
         static final Long cache[] = new Long[-(-128) + 127 + 1];
         // 初始化
@@ -852,4 +852,35 @@ class MyAtomicInteger{
 
 
 #### 并发工具
-    
+    自定义线程池:
+        线程池 + 阻塞队列  
+    ThreadPoolExecutor:
+        线程池状态:  
+            使用int的高3位表示线程池状态 ，低29位表示线程数量 
+            为了保证这些信息存储在一个原子变量ctl中，
+            目的是将线程池状态与线程个数合二为一，这样就可以用一次cas原子操作进行赋值
+            rs | wc  rs：run status wc: worker count
+            RUNNING 111 Y Y 
+            SHUTDOWN 000 N Y  不会接受新任务 但是会处理阻塞队列剩余任务
+            STOP     001 N N  会中断正在执行的任务 并抛弃阻塞队列任务
+            TIDYING  010 -- 任务全部执行完毕 活动线程位0 即将进入终止状态
+            TERMINATED 011 -- 终结状态
+            
+            ThreadPoolExecutor(int corePoolSize // 核心线程数 (最多保留的核心数) 救急线程有生存时间,
+                              int maximumPoolSize // 最大线程数,
+                              long keepAliveTime // 生存时间 针对救济线程,
+                              TimeUnit unit // 时间单位,
+                              BlockingQueue<Runnable> workQueue // 阻塞队列,
+                              ThreadFactory threadFactory // 线程工厂--可以为线程创建时起名字,
+                              RejectedExecutionHandler handler) // 拒绝 策略
+            只有队列选择了有界队列，那么任务超过了队列大小时，会创建 maximumPoolSize-  corePoolSize 数目的线程来救急
+            jdk4种实现:   
+                AbortPolicy让调用者抛出异常，默认策略
+                CallerRunsPolicy让调用者运行任务
+                DiscardPolicy放弃本次任务
+                DiscardOldestPolicy放弃队列中最早的任务，本任务取而代之
+                其他框架的增强或实现 dubbo netty pinpoint...
+            
+            Executors:
+                newFixedThreadPool:没有救急线程 只有核心线程，阻塞队列是无界的 LinkedBlockingQueue，适用于任务量已知，相对耗时的
+                 
