@@ -882,5 +882,30 @@ class MyAtomicInteger{
                 其他框架的增强或实现 dubbo netty pinpoint...
             
             Executors:
-                newFixedThreadPool:没有救急线程 只有核心线程，阻塞队列是无界的 LinkedBlockingQueue，适用于任务量已知，相对耗时的
-                 
+                newFixedThreadPool:没有救急线程 只有核心线程，阻塞队列是无界的 LinkedBlockingQueue，
+                适用于任务量已知，相对耗时的
+                newCacheThreadPool:全部都是救急线程 60秒后回收 SynchronousQueue 它没有容量 相当于来取才有放 一手交钱一手交货 ，
+                适合任务密集的，执行时间短的
+                newSingleThreadPool:只有一个核心线程，没有核心线程，阻塞队列是无界的 LinkedBlockingQueue 
+                适用于任务需要串行的操作 普通的创建线程执行没有补救的机制，但是该线程池会补救，保证有一个可用的线程
+                return new FinalizableDelegatedExecutorService
+                            (new ThreadPoolExecutor(1, 1,
+                                                    0L, TimeUnit.MILLISECONDS,
+                                                    new LinkedBlockingQueue<Runnable>())); 返回的是一个包装后的对象 对外只暴露ExecutorService方法，不可变
+            
+                newScheduledThreadPool:带任务调度的线程池 ，任何一个任务出现异常不会影响其他的
+            execute跟sumbit 接收的参数不一样 一个是Runnable 一个是callable有返回值
+            invokeAll()提交所有的任务 带timeout的话就会直接放弃后续任务
+            invokeAny()只要有一个任务完成，那么就会返回结果，取消后面的任务
+            shutdown() 将状态转为shutdown 不会阻塞调用线程的执行
+            shutdownNow() 状态转为stop 并会interrupt中断进行中的任务
+
+#### 异步模式之工作线程
+    让有限的工作线程来轮流异步处理无限多的任务
+    
+
+#### 线程池大小
+    CPU密集型运算: 做数据分析 使用Cpu 实现CPU最优利用 大小 cpu核数 + 1
+    I/O密集型运算: 执行业务计算时，经验公式: 线程数 = 核数 * 期望CPU利用率 * 总时间(CPU计算时间 + 等待时间) / CPU计算时间
+    计算时间越短，线程数应该越多
+    
