@@ -31,7 +31,6 @@ public class TestCurrThread {
 //        },1,1,TimeUnit.SECONDS);
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime next = now.withHour(18).withMinute(0).withSecond(0).withNano(0).with(DayOfWeek.THURSDAY);
-        if()
         scheduledExecutorService.scheduleWithFixedDelay(() -> {
             log.debug("run..");
             try {

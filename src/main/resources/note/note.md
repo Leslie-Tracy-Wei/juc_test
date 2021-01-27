@@ -908,4 +908,122 @@ class MyAtomicInteger{
     CPU密集型运算: 做数据分析 使用Cpu 实现CPU最优利用 大小 cpu核数 + 1
     I/O密集型运算: 执行业务计算时，经验公式: 线程数 = 核数 * 期望CPU利用率 * 总时间(CPU计算时间 + 等待时间) / CPU计算时间
     计算时间越短，线程数应该越多
+
+
+#### fork/join 
+    jdk1.7加入的，体现的是一种分治的实现，适用于能够将任务拆分的cpu密集型计算 -》 将大任务拆分成小的任务 直到不能继续拆分
     
+#### JUC
+    aqs:
+        抽象队列式同步器:是阻塞式锁和其他同步器工具的框架
+        state： 
+            独占：只有一个线程可以访问资源
+            共享：允许多个线程访问资源
+        提供一个FIFO等待队列 类似于Monitor的entrySet
+        条件变量来实现等待，唤醒 支持多个条件变量 类似于monitor的waitSet
+        相关方法:
+            tryAcquire():获取锁
+            tryRelease():释放锁
+    自定义锁:
+```java
+
+@Slf4j
+public class TestAQS {
+    public static void main(String[] args) {
+        MyLock lock = new MyLock();
+        new Thread(() ->{
+            try{
+                lock.lock();
+                log.debug("lock.....");
+                lock.lock();
+                log.debug("lock.....");
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } finally {
+                log.debug("unlock.....");
+                lock.unlock();
+            }
+
+        }).start();
+
+        new Thread(() ->{
+            try{
+                lock.lock();
+                log.debug("lock.....");
+            } finally {
+                log.debug("unlock.....");
+                lock.unlock();
+            }
+
+        }).start();
+    }
+}
+
+class MyLock implements Lock{
+
+    // 独占类 同步器类
+    class MySync extends AbstractQueuedSynchronizer{
+        @Override
+        protected boolean tryAcquire(int arg) {
+            if (compareAndSetState(0,1)){
+                // 成功加上锁 并设置owner为当前线程
+                setExclusiveOwnerThread(Thread.currentThread());
+                return true;
+            }
+            return false;
+        }
+
+        @Override
+        protected boolean tryRelease(int arg) {
+            setExclusiveOwnerThread(null);
+            // 循序有要求 保证加
+            setState(0);
+            return true;
+        }
+
+        @Override // 是否持有独占锁
+        protected boolean isHeldExclusively() {
+            return getState() == 1;
+        }
+
+        public Condition newCondition(){
+            return new ConditionObject();
+        }
+    }
+    private  MySync mySync = new MySync();
+    @Override
+    public void lock() {
+        mySync.acquire(1);
+    }
+
+    @Override
+    public void lockInterruptibly() throws InterruptedException {
+        mySync.acquireInterruptibly(1);
+    }
+
+    @Override
+    public boolean tryLock() {
+        return mySync.tryAcquire(1);
+    }
+
+    @Override
+    public boolean tryLock(long time, TimeUnit unit) throws InterruptedException {
+        return mySync.tryAcquireNanos(1,unit.toNanos(time));
+    }
+
+    @Override
+    public void unlock() {
+        mySync.release(1);
+
+    }
+
+    @Override
+    public Condition newCondition() {
+        return mySync.newCondition();
+    }
+}
+```
+    reentranLock原理:
+        可重入原理:
+            
