@@ -1026,4 +1026,32 @@ class MyLock implements Lock{
 ```
     reentranLock原理:
         可重入原理:
+            state++ 一直累加上去 保证解锁的时候 每次减1  state--减为0才解锁
             
+```java
+final boolean nonfairTryAcquire(int acquires) {
+            final Thread current = Thread.currentThread();
+            int c = getState();
+            if (c == 0) {
+                if (compareAndSetState(0, acquires)) {
+                    setExclusiveOwnerThread(current);
+                    return true;
+                }
+            }
+            else if (current == getExclusiveOwnerThread()) {
+                int nextc = c + acquires;
+                if (nextc < 0) // overflow
+                    throw new Error("Maximum lock count exceeded");
+                setState(nextc);
+                return true;
+            }
+            return false;
+        }
+```
+
+#### 读写锁
+    ReentrantReadWriteLock : 当读操作远远高于写操作时，这时候使用读写锁让读-读并发 提高性能
+    读锁不能支持条件变量
+    重入时升级不支持，持有读锁的情况下获取写锁，会导致写锁永久等待
+    但是支持降级，就是持有写锁的情况下获取读锁， 
+    可以应用到缓存中
