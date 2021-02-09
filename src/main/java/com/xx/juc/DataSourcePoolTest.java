@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicIntegerArray;
 
 @Slf4j
@@ -38,9 +39,14 @@ class Pool{
     // 连接状态数组 0 --空闲 1--繁忙
     private AtomicIntegerArray states;
 
+    // 资源数跟线程数大小一致
+    private Semaphore semaphore;
+
     // 构造方法
     public Pool(int poolSize){
         this.poolSize = poolSize;
+        // 资源数跟线程数大小一致
+        this.semaphore = new Semaphore(poolSize);
         this.connections = new Connection[poolSize];
         this.states = new AtomicIntegerArray(new int[poolSize]);
         for (int i = 0; i < poolSize; i++) {
@@ -49,6 +55,38 @@ class Pool{
     }
 
 
+    // 借出连接
+    public Connection borrowBySemaphore(){
+
+        try {
+            semaphore.acquire();
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+
+        for (int i = 0; i < poolSize; i++) {
+            // 获取空闲连接
+            if(states.get(i) == 0){
+                if (states.compareAndSet(i,0,1)) {
+                    log.debug("borrow {}",connections[i]);
+                    return connections[i];
+                }
+            }
+        }
+        return null;
+    }
+
+    // 还连接
+    public void freeBySemaphore (Connection connection){
+        for (int i = 0; i < poolSize; i++) {
+            if (connections[i] == connection) {
+                states.set(i,0);
+                semaphore.release();
+                break;
+            }
+        }
+
+    }
     // 借出连接
     public Connection borrow(){
         // 上面是cas操作

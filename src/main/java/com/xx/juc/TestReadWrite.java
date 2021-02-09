@@ -29,7 +29,7 @@ class DataContainer{
 
     }
 
-    public void read(){
+    public void write(){
         try {
             w.lock();
             log.debug("写数据");

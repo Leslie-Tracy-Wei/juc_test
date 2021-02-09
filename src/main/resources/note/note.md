@@ -1055,3 +1055,32 @@ final boolean nonfairTryAcquire(int acquires) {
     重入时升级不支持，持有读锁的情况下获取写锁，会导致写锁永久等待
     但是支持降级，就是持有写锁的情况下获取读锁， 
     可以应用到缓存中
+    
+    StampedLock:进一步优化读性能，在使用读，写的时候都使用戳来加解锁
+        缺点:不支持条件变量 不支持重入
+ 
+#### 信号量 semaphore 
+    用来限制能同时访问共享资源的线程上限  并不能限制资源数
+    用来做单机的限流
+
+
+#### 倒计时锁 countDownLatch
+    不能复用
+    
+#### 循环栅栏 cyclicBarrier
+    升级版的countDownLatch
+
+#### 线程安全集合类
+    hashTable 
+    Blocking大部分都是实现基于锁 并提供用来阻塞的方法
+    CopyOnWrite 以拷贝的形式 修改的开销比较重
+    Concurrent:
+        性能比较高 使用cas和多把锁 一般提高提高吞吐量
+        弱一致性 遍历的弱一致性 求集合大小的弱一致性 读取弱一致性
+        遍历时如果发生修改，对于非安全的容器来讲，会使用fail-fast机制，让遍历立即失效
+        抛出ConcurrentModificationException 
+    
+    ConcurrentHashMap:
+        computeIfAbsent：如果缺少一个key，则计算生成一个value，然后将key value放入map 保证get ，put的原子性
+        jdk7 hashmap： 后加入的会加在链表头 并发死链
+        jdk8 hashmap： 扩容算法调整，不再将元素加入到链表头，但是在多线程下也不能正常扩容，还是会出现其他问题 如扩容丢数据
